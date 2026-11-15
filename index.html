@@ -3,23 +3,311 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>WILL YOU SEE A NIGHTMARE, OR…?</title>
+<title>Nightmare Bridge</title>
+<meta name="description" content="Nightmare Bridge — the one-way migration bridge from eCAW (Ethereum) to cqCAW (QL1). Not operating yet: the bridge contracts are built but not yet deployed.">
 <style>
+  :root {
+    --red: #c00020;
+    --red-bright: #e01430;
+    --ink: #e8e2e2;
+    --ink-dim: #a89f9f;
+    --panel: #0d0507;
+    --panel-border: #3a0a12;
+    --grey-field: #1a1a1a;
+    --grey-text: #6f6f6f;
+  }
+  * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; background: #000; }
-  body { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-  p {
-    color: #c00020;
-    font-weight: 700;
-    text-align: center;
-    font-size: clamp(28px, 6vw, 64px);
-    line-height: 1.4;
-    padding: 24px;
-    margin: 0;
+  body {
+    color: var(--ink);
+    font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 20px 18px 56px; }
+
+  header.top {
+    display: flex; justify-content: flex-end; align-items: center;
+    padding: 6px 0 0;
+  }
+  button.toggle {
+    background: transparent; color: var(--ink-dim);
+    border: 1px solid var(--panel-border); border-radius: 999px;
+    padding: 6px 16px; font-size: 14px; cursor: pointer;
+  }
+  button.toggle:hover { color: var(--red-bright); border-color: var(--red); }
+
+  .hero { text-align: center; padding: 48px 0 8px; }
+  .hero .line {
+    color: var(--red);
     font-family: Georgia, "Times New Roman", serif;
+    font-weight: 700;
+    font-size: clamp(28px, 6vw, 58px);
+    line-height: 1.4;
+    margin: 0;
+  }
+  .hero h1 {
+    color: var(--red-bright);
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: clamp(30px, 5.4vw, 48px);
+    letter-spacing: 0.06em;
+    margin: 36px 0 6px;
+  }
+  .hero .sub { color: var(--ink-dim); margin: 0; font-size: 16px; }
+
+  .status {
+    margin: 34px 0 8px;
+    border: 2px solid var(--red);
+    background: #16040a;
+    border-radius: 10px;
+    padding: 18px 20px;
+    text-align: center;
+  }
+  .status .tag {
+    display: inline-block;
+    color: #fff; background: var(--red);
+    font-weight: 700; font-size: 13px; letter-spacing: 0.12em;
+    border-radius: 4px; padding: 3px 12px; margin-bottom: 10px;
+  }
+  .status p { margin: 0; font-size: 17px; font-weight: 600; color: #f3d9dd; }
+
+  section.card {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 22px 22px 18px;
+    margin: 22px 0;
+  }
+  section.card h2 {
+    color: var(--red-bright);
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 22px; margin: 0 0 14px;
+    letter-spacing: 0.03em;
+  }
+  section.card p { margin: 0 0 12px; }
+  .addr {
+    font-family: "SFMono-Regular", Consolas, "Courier New", monospace;
+    font-size: 13.5px; word-break: break-all; color: #f0c9ce;
+  }
+  .route {
+    display: flex; flex-direction: column; gap: 10px; align-items: stretch;
+    margin: 6px 0 16px;
+  }
+  .route .node {
+    border: 1px solid var(--panel-border); border-radius: 8px;
+    padding: 12px 16px; background: #000;
+  }
+  .route .node .name { font-weight: 700; font-size: 17px; }
+  .route .node .chain { color: var(--ink-dim); font-size: 14px; }
+  .route .arrow {
+    text-align: center; color: var(--red-bright); font-size: 22px; line-height: 1;
+  }
+  .route .arrow small { display: block; font-size: 13px; color: var(--ink-dim); letter-spacing: 0.08em; }
+  dl.facts { margin: 0; }
+  dl.facts dt { color: var(--ink-dim); font-size: 13.5px; margin-top: 10px; }
+  dl.facts dd { margin: 2px 0 0; }
+
+  ol.terms { margin: 0; padding-left: 22px; }
+  ol.terms li { margin-bottom: 12px; }
+  ol.terms li strong { color: #f3d9dd; }
+
+  .bridge-ui label { display: block; color: var(--grey-text); font-size: 14px; margin: 12px 0 6px; }
+  .bridge-ui input {
+    width: 100%; padding: 13px 14px; font-size: 16px;
+    background: var(--grey-field); color: var(--grey-text);
+    border: 1px solid #2c2c2c; border-radius: 8px;
+    cursor: not-allowed;
+  }
+  .bridge-ui button {
+    width: 100%; margin-top: 18px; padding: 14px;
+    font-size: 16px; font-weight: 700;
+    background: #262626; color: #777;
+    border: 1px solid #333; border-radius: 8px;
+    cursor: not-allowed;
+  }
+  .bridge-ui .note { color: var(--grey-text); font-size: 13.5px; margin-top: 12px; }
+
+  .why { text-align: center; color: var(--ink-dim); font-size: 15.5px; margin: 30px 6px 0; }
+  .why em { color: #d8a7ad; }
+
+  footer {
+    margin-top: 44px; padding-top: 18px;
+    border-top: 1px solid var(--panel-border);
+    text-align: center; color: var(--ink-dim); font-size: 14px;
+  }
+  footer .brandline { color: var(--red); font-family: Georgia, "Times New Roman", serif; letter-spacing: 0.05em; }
+
+  @media (max-width: 560px) {
+    .wrap { padding: 14px 14px 44px; }
+    section.card { padding: 18px 16px 14px; }
+    .hero { padding-top: 32px; }
   }
 </style>
 </head>
 <body>
-<p>WILL YOU SEE A NIGHTMARE, OR…? IT DEPENDS ON THE COMMUNITY'S ACTIONS…</p>
+<div class="wrap">
+
+  <header class="top">
+    <button type="button" class="toggle" id="langBtn" aria-label="Language">日本語</button>
+  </header>
+
+  <!-- ================= ENGLISH ================= -->
+  <div id="lang-en">
+
+    <div class="hero">
+      <p class="line">WILL YOU SEE A NIGHTMARE, OR…? IT DEPENDS ON THE COMMUNITY'S ACTIONS…</p>
+      <h1>Nightmare Bridge</h1>
+      <p class="sub">The one-way migration bridge from eCAW (Ethereum) to cqCAW (QL1).</p>
+    </div>
+
+    <div class="status">
+      <span class="tag">NOT OPERATING</span>
+      <p>NOT OPERATING — the bridge contracts are built but not yet deployed. Migration has not started.</p>
+    </div>
+
+    <section class="card">
+      <h2>The route</h2>
+      <div class="route">
+        <div class="node">
+          <div class="name">eCAW</div>
+          <div class="chain">CAW on Ethereum</div>
+        </div>
+        <div class="arrow">↓<small>ONE-WAY LOCK — NO WAY BACK</small></div>
+        <div class="node">
+          <div class="name">cqCAW</div>
+          <div class="chain">Community qCAW on QL1</div>
+        </div>
+      </div>
+      <dl class="facts">
+        <dt>eCAW — CAW (Ethereum)</dt>
+        <dd>“A Hunters Dream”, symbol CAW, 18 decimals<br>
+          <span class="addr">0xf3b9569F82B18aEf890De263B84189bd33EBe452</span></dd>
+        <dt>cqCAW — Community qCAW (QL1)</dt>
+        <dd>Total supply 646,228,401,676,033.907898028447996533 — no further minting, no admin<br>
+          <span class="addr">0x21aDfA6EbAA11cC25C38AD6aA00302527c519ee8</span></dd>
+      </dl>
+    </section>
+
+    <section class="card">
+      <h2>Terms — read before anything moves</h2>
+      <ol class="terms">
+        <li><strong>One-way only.</strong> There is no bridge back. Deposited eCAW cannot be returned.</li>
+        <li><strong>Deposits are final.</strong> A deposit cannot be cancelled or reversed.</li>
+        <li><strong>Payout is not instant.</strong> cqCAW is paid out on QL1 only after the Ethereum deposit is confirmed and an authorization signature is issued.</li>
+        <li><strong>Collected eCAW is released under a fixed rule.</strong> The lock releases at most 5% of the cumulative locked amount per 30 days, to one fixed address — a rule written into the contract that no one can change. What is released is sold to fund liquidity for 42CAW. This is stated upfront.</li>
+        <li><strong>What lies beyond is a later stage.</strong> Carrying cqCAW on to 42 Chain and converting it to 42CAW is a separate stage that has not started.</li>
+      </ol>
+    </section>
+
+    <section class="card bridge-ui" aria-disabled="true">
+      <h2>Migrate</h2>
+      <label for="amount-en">Amount of eCAW to deposit (Ethereum)</label>
+      <input id="amount-en" type="text" placeholder="0.0" disabled>
+      <label for="dest-en">You would receive (QL1)</label>
+      <input id="dest-en" type="text" placeholder="cqCAW — not operating" disabled>
+      <button type="button" disabled>Not operating yet</button>
+      <p class="note">This panel is a preview of the intended flow. It connects to no wallet and moves no funds.</p>
+    </section>
+
+    <p class="why">On QL1, it was BE. On Ethereum, it was Gilgamesh. Both left their communities with a question before walking away. <em>The answer is 42.</em> This bridge is one of the doors toward it.</p>
+
+  </div>
+
+  <!-- ================= 日本語 ================= -->
+  <div id="lang-ja" hidden>
+
+    <div class="hero">
+      <p class="line">WILL YOU SEE A NIGHTMARE, OR…? IT DEPENDS ON THE COMMUNITY'S ACTIONS…</p>
+      <h1>Nightmare Bridge</h1>
+      <p class="sub">eCAW（Ethereum）から cqCAW（QL1）への、一方通行の移行ブリッジ。</p>
+    </div>
+
+    <div class="status">
+      <span class="tag">未稼働</span>
+      <p>未稼働 — ブリッジのコントラクトは作成済みですが、まだデプロイされていません。移行は始まっていません。</p>
+    </div>
+
+    <section class="card">
+      <h2>ルート</h2>
+      <div class="route">
+        <div class="node">
+          <div class="name">eCAW</div>
+          <div class="chain">Ethereum 上の CAW</div>
+        </div>
+        <div class="arrow">↓<small>一方通行のロック — 戻る道はありません</small></div>
+        <div class="node">
+          <div class="name">cqCAW</div>
+          <div class="chain">QL1 上の Community qCAW</div>
+        </div>
+      </div>
+      <dl class="facts">
+        <dt>eCAW — CAW（Ethereum）</dt>
+        <dd>「A Hunters Dream」、シンボル CAW、18 桁<br>
+          <span class="addr">0xf3b9569F82B18aEf890De263B84189bd33EBe452</span></dd>
+        <dt>cqCAW — Community qCAW（QL1）</dt>
+        <dd>総供給量 646,228,401,676,033.907898028447996533 — 追加発行なし、管理者なし<br>
+          <span class="addr">0x21aDfA6EbAA11cC25C38AD6aA00302527c519ee8</span></dd>
+      </dl>
+    </section>
+
+    <section class="card">
+      <h2>条件 — 何かが動く前に読んでください</h2>
+      <ol class="terms">
+        <li><strong>一方通行のみ。</strong>戻るブリッジはありません。預けた eCAW は返却できません。</li>
+        <li><strong>預け入れは最終的です。</strong>取り消しや巻き戻しはできません。</li>
+        <li><strong>支払いは即時ではありません。</strong>cqCAW は、Ethereum 側の預け入れが確認され、承認署名が発行された後にのみ QL1 で支払われます。</li>
+        <li><strong>集まった eCAW は固定ルールでのみ解放されます。</strong>ロックからの解放は、30日ごとに累計ロック量の最大5%まで、1つの固定アドレス宛に限ります。これはコントラクトに書かれたルールで、誰にも変更できません。解放された分は 42CAW の流動性のために売却されます。この点は事前に明示します。</li>
+        <li><strong>この先は後段の段階です。</strong>cqCAW を 42 Chain へ運び、42CAW へ変換することは、別の段階であり、まだ始まっていません。</li>
+      </ol>
+    </section>
+
+    <section class="card bridge-ui" aria-disabled="true">
+      <h2>移行する</h2>
+      <label for="amount-ja">預ける eCAW の量（Ethereum）</label>
+      <input id="amount-ja" type="text" placeholder="0.0" disabled>
+      <label for="dest-ja">受け取る量（QL1）</label>
+      <input id="dest-ja" type="text" placeholder="cqCAW — 未稼働" disabled>
+      <button type="button" disabled>まだ稼働していません</button>
+      <p class="note">このパネルは想定される流れのプレビューです。ウォレットには接続せず、資金も動きません。</p>
+    </section>
+
+    <p class="why">QL1 では BE が、Ethereum ではギルガメッシュが、去り際にコミュニティへ問いを残しました。<em>答えは 42。</em>このブリッジは、そこへ向かう扉の1つです。</p>
+
+  </div>
+
+  <footer>
+    <div id="foot-en">
+      <p class="brandline">NIGHTMARE BRIDGE</p>
+      <p>Developed by the community · Not an official site</p>
+    </div>
+    <div id="foot-ja" hidden>
+      <p class="brandline">NIGHTMARE BRIDGE</p>
+      <p>コミュニティによる開発 · 公式のサイトではありません</p>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+  (function () {
+    var lang = 'en';
+    try { lang = localStorage.getItem('nightmare-lang') === 'ja' ? 'ja' : 'en'; } catch (e) {}
+    var langBtn = document.getElementById('langBtn');
+    function apply() {
+      document.getElementById('lang-en').hidden = lang !== 'en';
+      document.getElementById('lang-ja').hidden = lang !== 'ja';
+      document.getElementById('foot-en').hidden = lang !== 'en';
+      document.getElementById('foot-ja').hidden = lang !== 'ja';
+      document.documentElement.lang = lang === 'ja' ? 'ja' : 'en';
+      langBtn.textContent = lang === 'ja' ? 'English' : '日本語';
+    }
+    langBtn.addEventListener('click', function () {
+      lang = lang === 'ja' ? 'en' : 'ja';
+      try { localStorage.setItem('nightmare-lang', lang); } catch (e) {}
+      apply();
+    });
+    apply();
+  })();
+</script>
 </body>
 </html>
